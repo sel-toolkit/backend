@@ -1,0 +1,35 @@
+services:
+  sel_mysql:
+    image: mysql:lts
+    restart: always
+    ports:
+      - '3307:3306'
+    volumes:
+      - ~/apps/sel/mysql:/var/lib/mysql
+      - /var/www/sel-backend/manifest/sql:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_DATABASE: 'sel'
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: 'Asia/Taipei'
+  sel_redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - '6380:6379'
+    volumes:
+      - ~/apps/sel/redis/data:/data
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+  sel_backend:
+    image: sel_backend
+    restart: always
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    depends_on:
+      - sel_mysql
+      - sel_redis
+    volumes:
+      - ~/apps/sel/backend/logs:/app/logs
+      - /var/www/sel-backend/.env:/app/.env
+      - /var/www/sel-backend/manifest/config/config.yaml:/app/manifest/config/config.yaml
