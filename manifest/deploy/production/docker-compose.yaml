@@ -1,19 +1,17 @@
 services:
-  mysql:
+  sel_mysql:
     image: mysql:lts
     restart: always
     ports:
       - '3307:3306'
     volumes:
       - ~/apps/sel/mysql:/var/lib/mysql
-      - /home/sel/sel-backend/manifest/sql:/docker-entrypoint-initdb.d
+      - /var/www/sel-backend/manifest/sql:/docker-entrypoint-initdb.d
     environment:
       MYSQL_DATABASE: 'sel'
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       TZ: 'Asia/Taipei'
-    networks:
-      - caddy_network
-  redis:
+  sel_redis:
     image: redis:latest
     restart: always
     ports:
@@ -21,24 +19,17 @@ services:
     volumes:
       - ~/apps/sel/redis/data:/data
     command: redis-server --requirepass ${REDIS_PASSWORD}
-    networks:
-      - caddy_network
-  backend:
-    image: sel_backend
+  sel_backend:
+    image: sel-backend
     restart: always
     ports:
-      - "8001:8000"
+      - "8001:8001"
     env_file:
       - .env
     depends_on:
-      - mysql
-      - redis
+      - sel_mysql
+      - sel_redis
     volumes:
       - ~/apps/sel/backend/logs:/app/logs
-      - /home/sel/sel-backend/.env:/app/.env
-      - /home/sel/sel-backend/manifest/config/config.yaml:/app/manifest/config/config.yaml
-    networks:
-      - caddy_network
-networks:
-  caddy_network:
-    external: true
+      - /var/www/sel-backend/.env:/app/.env
+      - /var/www/sel-backend/manifest/config/config.yaml:/app/manifest/config/config.yaml

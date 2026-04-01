@@ -68,8 +68,8 @@ jobs:
         with:
           name: backend-artifacts
           path: |
-            backend/tmp/backend.tar
-            backend/manifest/deploy/docker-compose.yaml
+            tmp/backend.tar
+            compose.yaml
           retention-days: 1
 
   deploy:
@@ -114,8 +114,8 @@ jobs:
               --service-token-id ${{ secrets.CF_ACCESS_CLIENT_ID }} \
               --service-token-secret ${{ secrets.CF_ACCESS_CLIENT_SECRET }}" \
             -o StrictHostKeyChecking=no \
-            backend/tmp/backend.tar \
-            backend/manifest/deploy/docker-compose.yaml \
+            tmp/backend.tar \
+            manifest/deploy/docker-compose.yaml \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_TARGET }}
 
       - name: Restart Docker stack
