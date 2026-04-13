@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"backend/utility"
+
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
@@ -36,28 +38,20 @@ func MiddlewareCORS(r *ghttp.Request) {
 	r.Response.WriteStatusExit(http.StatusForbidden)
 }
 
-// func MiddlewareAuth(r *ghttp.Request) {
-// 	aToken := r.Cookie.Get("access_token").String()
-// 	rToken := r.Cookie.Get("refresh_token").String()
-// 	aTokenClaims, err := utility.ValidateJWT(aToken, utility.AccessToken)
-// 	if err != nil || aTokenClaims == nil {
-// 		// refresh token
-// 		rTokenClaims, err := utility.ValidateJWT(rToken, utility.RefreshToken)
-// 		if err != nil || rTokenClaims == nil {
-// 			r.Response.WriteStatusExit(http.StatusUnauthorized, "Unauthorized")
-// 			r.ExitAll()
-// 		}
-// 		err = utility.SetAuthTokens(r.Context(), r, rTokenClaims.UserId)
-// 		if err != nil {
-// 			r.Response.WriteStatusExit(http.StatusInternalServerError, "Token refresh failed")
-// 			r.ExitAll()
-// 		}
-// 		r.SetCtxVar("userId", rTokenClaims.UserId)
-// 	} else {
-// 		r.SetCtxVar("userId", aTokenClaims.UserId)
-// 	}
-// 	r.Middleware.Next()
-// }
+func MiddlewareAuth(r *ghttp.Request) {
+	tokenStr := r.Cookie.Get("access_token").String()
+	if tokenStr == "" {
+		r.Response.WriteStatusExit(http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	claims, err := utility.ValidateJWT(tokenStr, utility.AccessToken)
+	if err != nil || claims == nil {
+		r.Response.WriteStatusExit(http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	r.SetCtxVar("teacherId", int64(claims.UserId))
+	r.Middleware.Next()
+}
 
 // func MiddlewareAdmin(r *ghttp.Request) {
 // 	userId := r.GetCtxVar("userId").Uint64()

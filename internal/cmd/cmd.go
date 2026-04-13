@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"net/http"
 
+	"backend/internal/controller/auth"
 	"backend/internal/controller/hello"
 
 	"github.com/gogf/gf/v2/errors/gcode"
@@ -12,21 +14,51 @@ import (
 	"github.com/gogf/gf/v2/os/gcmd"
 )
 
-func ErrorHandle(r *ghttp.Request) {
+type Response struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+func MiddlewareResponse(r *ghttp.Request) {
 	r.Middleware.Next()
-	if err := r.GetError(); err != nil {
-		gErrCode := gerror.Code(err)
-		if gErrCode == gcode.CodeValidationFailed {
-			r.Response.Status = 400
-			r.Response.WriteJsonExit(g.Map{
-				"message": "格式校驗失敗",
-				"error":   "格式有誤",
-				"code":    400,
-				"data":    "格式有誤",
-			})
-			return
-		}
+
+	if r.Response.BufferLength() > 0 {
+		return
 	}
+
+	err := r.GetError()
+	if err != nil {
+		gErrCode := gerror.Code(err)
+		httpStatus := http.StatusInternalServerError
+		code := 500
+
+		switch gErrCode {
+		case gcode.CodeValidationFailed:
+			httpStatus = http.StatusBadRequest
+			code = 400
+		case gcode.CodeNotAuthorized:
+			httpStatus = http.StatusUnauthorized
+			code = 401
+		case gcode.CodeNotFound:
+			httpStatus = http.StatusNotFound
+			code = 404
+		}
+
+		r.Response.Status = httpStatus
+		r.Response.WriteJsonExit(Response{
+			Code:    code,
+			Message: err.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	r.Response.WriteJsonExit(Response{
+		Code:    200,
+		Message: "success",
+		Data:    r.GetHandlerResponse(),
+	})
 }
 
 var (
@@ -36,22 +68,18 @@ var (
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 			s := g.Server()
-			s.Use(ErrorHandle)
+			s.Use(MiddlewareResponse)
 			s.Group("/", func(group *ghttp.RouterGroup) {
 				group.Middleware(MiddlewareCSP)
 				group.Middleware(MiddlewareCORS)
 				group.Bind(
 					hello.NewV1(),
+					auth.NewV1(),
 				)
-				// group.Middleware(MiddlewareAuth)
-				// group.Bind(
-				// )
-				// group.Middleware(MiddlewareAdmin)
-				// group.Bind(
-				// )
-				// group.Middleware(MiddlewareSuperAdmin)
-				// group.Bind(
-				// )
+				group.Middleware(MiddlewareAuth)
+				group.Bind(
+					auth.NewV1Protected(),
+				)
 			})
 			s.Run()
 			return nil

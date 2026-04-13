@@ -17,6 +17,9 @@ database:
 jwt:
   secureCookie: false # 本地開發設為 false，正式環境設 true
 
+google:
+  clientId: "your-google-oauth-client-id"
+
 # https://goframe.org/docs/components/contrib-nosql-redis-config
 redis:
   RegisterToken:
