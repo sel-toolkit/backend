@@ -6,11 +6,15 @@ services:
       - '3307:3306'
     volumes:
       - ~/apps/sel/mysql:/var/lib/mysql
-      - ./manifest/sql:/docker-entrypoint-initdb.d
     environment:
       MYSQL_DATABASE: 'sel'
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       TZ: 'Asia/Taipei'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
   sel_redis:
     image: redis:latest
     restart: always
@@ -19,6 +23,18 @@ services:
     volumes:
       - ~/apps/sel/redis/data:/data
     command: redis-server --requirepass ${REDIS_PASSWORD}
+  sel_migrate:
+    image: sel_backend
+    command: ["./main", "-migrate", "up"]
+    env_file:
+      - .env
+    depends_on:
+      sel_mysql:
+        condition: service_healthy
+    volumes:
+      - ./.env:/app/.env
+      - ./manifest/config/config.yaml:/app/manifest/config/config.yaml
+    restart: "no"
   sel_backend:
     image: sel_backend
     restart: always
@@ -27,8 +43,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - sel_mysql
-      - sel_redis
+      sel_migrate:
+        condition: service_completed_successfully
+      sel_redis:
+        condition: service_started
     volumes:
       - ~/apps/sel/backend/logs:/app/logs
       - ./.env:/app/.env
