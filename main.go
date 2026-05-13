@@ -4,6 +4,7 @@ import (
 	"backend/env"
 	_ "backend/internal/packed"
 	"backend/utility"
+	"embed"
 	"flag"
 	"fmt"
 
@@ -15,6 +16,9 @@ import (
 
 	"backend/internal/cmd"
 )
+
+//go:embed manifest/sql
+var migrationsFS embed.FS
 
 func main() {
 	migrateCmd := flag.String("migrate", "", "database migration command: up / down")
